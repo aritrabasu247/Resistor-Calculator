@@ -4,6 +4,463 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Resistor Color Code Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── TOKENS ──────────────────────────────────────────── */
+    :root {
+      --bg:          #0d0f12;
+      --surface:     #13161b;
+      --surface2:    #1b1f27;
+      --border:      #252932;
+      --border2:     #2e3340;
+      --accent:      #f0c040;
+      --accent2:     #e8843a;
+      --text:        #e8eaf0;
+      --text-dim:    #7a8090;
+      --text-muted:  #454c5c;
+      --green:       #3ecf6e;
+      --red:         #e05555;
+      --mono:        'Space Mono', monospace;
+      --sans:        'DM Sans', sans-serif;
+      --radius:      12px;
+      --radius-sm:   6px;
+    }
+
+    /* ─── RESET ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, #f0c04012 0%, transparent 70%),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, #ffffff04 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, #ffffff04 40px);
+    }
+
+    /* ─── LAYOUT ──────────────────────────────────────────── */
+    .page-wrapper {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 1.25rem 3rem;
+    }
+
+    /* ─── HEADER ──────────────────────────────────────────── */
+    .site-header {
+      padding: 2rem 0 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-icon {
+      font-size: 2.4rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 12px #f0c04055);
+    }
+
+    .site-title {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .site-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ─── MODE BAR ────────────────────────────────────────── */
+    .mode-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .mode-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .mode-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .mode-btn {
+      padding: 5px 18px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      letter-spacing: 0.04em;
+    }
+
+    .mode-btn:hover { color: var(--text); }
+
+    .mode-btn.active {
+      background: var(--accent);
+      color: #0d0f12;
+      font-weight: 700;
+      box-shadow: 0 2px 10px #f0c04040;
+    }
+
+    /* ─── RESISTOR VISUAL ─────────────────────────────────── */
+    .resistor-stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 0 2rem;
+      gap: 0;
+    }
+
+    .res-wire {
+      height: 3px;
+      width: 44px;
+      background: linear-gradient(90deg, #555, #888);
+      position: relative;
+    }
+
+    .res-wire--left  { border-radius: 2px 0 0 2px; }
+    .res-wire--right { border-radius: 0 2px 2px 0; }
+
+    .res-capsule {
+      display: flex;
+      align-items: stretch;
+      height: 58px;
+      background: linear-gradient(180deg, #f5e9c0 0%, #e8d9a0 40%, #d4c480 100%);
+      border-radius: 14px;
+      padding: 0 12px;
+      gap: 7px;
+      box-shadow:
+        0 4px 24px #00000066,
+        inset 0 1px 0 #fff8,
+        inset 0 -1px 0 #0004;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .res-capsule::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff22 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .res-band {
+      width: 13px;
+      height: 100%;
+      border-radius: 2px;
+      background: #c8b87a;
+      transition: background 0.25s cubic-bezier(.4,0,.2,1);
+      box-shadow: inset 1px 0 0 #fff3, inset -1px 0 0 #0003;
+    }
+
+    .res-gap { flex: 1; }
+
+    /* ─── BAND GRID ───────────────────────────────────────── */
+    .band-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 1.75rem;
+    }
+
+    .band-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .band-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .select-wrap {
+      position: relative;
+    }
+
+    .color-swatch {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      pointer-events: none;
+      transition: background 0.2s;
+    }
+
+    .color-select {
+      width: 100%;
+      height: 42px;
+      padding: 0 10px 0 32px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.85rem;
+      cursor: pointer;
+      appearance: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .color-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px #f0c04018;
+    }
+
+    .color-select:hover { border-color: var(--border2); filter: brightness(1.1); }
+
+    /* ─── RESULT PANEL ────────────────────────────────────── */
+    .result-panel {
+      margin-bottom: 2rem;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    .result-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-metric {
+      flex: 1;
+      min-width: 130px;
+      padding-right: 1.5rem;
+    }
+
+    .result-metric + .result-metric {
+      padding-left: 1.5rem;
+      padding-right: 0;
+      border-left: 1px solid var(--border);
+    }
+
+    .metric-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .metric-value.tol-value {
+      color: var(--text);
+      font-size: 1.5rem;
+    }
+
+    .result-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .range-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .range-value {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: var(--green);
+    }
+
+    .mult-badge {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* placeholder / error */
+    .status-msg {
+      background: var(--surface);
+      border: 1px dashed var(--border2);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-family: var(--mono);
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ─── REFERENCE TABLE ─────────────────────────────────── */
+    .ref-table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .ref-toggle {
+      padding: 0.9rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.15s;
+    }
+
+    .ref-toggle:hover { color: var(--text); }
+    .ref-toggle::before { content: '▶'; font-size: 0.6rem; transition: transform 0.2s; }
+    details[open] .ref-toggle::before { transform: rotate(90deg); }
+
+    .ref-table-scroll { overflow-x: auto; }
+
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .ref-table th {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0.6rem 1.25rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .ref-table td {
+      padding: 0.55rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .ref-table tr:last-child td { border-bottom: none; }
+    .ref-table tr:hover td { background: var(--surface2); color: var(--text); }
+
+    .ref-swatch {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 8px;
+      border: 1px solid #ffffff18;
+    }
+
+    /* ─── FOOTER ──────────────────────────────────────────── */
+    .site-footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      letter-spacing: 0.06em;
+    }
+
+    /* ─── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 500px) {
+      .metric-value { font-size: 1.5rem; }
+      .result-metric + .result-metric { border-left: none; border-top: 1px solid var(--border); padding: 1rem 0 0; margin-top: 1rem; }
+      .res-capsule { min-width: 160px; }
+      .res-wire { width: 24px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -21,7 +478,6 @@
 
     <main class="main-content">
 
-      <!-- Band mode selector -->
       <div class="mode-bar">
         <span class="mode-label">Band mode</span>
         <div class="mode-toggle">
@@ -30,7 +486,6 @@
         </div>
       </div>
 
-      <!-- Resistor visual -->
       <div class="resistor-stage">
         <div class="res-wire res-wire--left"></div>
         <div class="res-capsule" id="resbody">
@@ -44,21 +499,14 @@
         <div class="res-wire res-wire--right"></div>
       </div>
 
-      <!-- Band selectors grid -->
-      <div class="band-grid" id="band-grid">
-        <!-- Populated by JavaScript -->
-      </div>
+      <div class="band-grid" id="band-grid"></div>
 
-      <!-- Result display -->
-      <div class="result-panel" id="result-area">
-        <!-- Populated by JavaScript -->
-      </div>
+      <div class="result-panel" id="result-area"></div>
 
-      <!-- Color reference table -->
       <details class="ref-table-wrap">
         <summary class="ref-toggle">Color Code Reference Table</summary>
         <div class="ref-table-scroll">
-          <table class="ref-table" id="ref-table">
+          <table class="ref-table">
             <thead>
               <tr>
                 <th>Color</th>
@@ -67,9 +515,7 @@
                 <th>Tolerance</th>
               </tr>
             </thead>
-            <tbody id="ref-tbody">
-              <!-- Populated by JavaScript -->
-            </tbody>
+            <tbody id="ref-tbody"></tbody>
           </table>
         </div>
       </details>
