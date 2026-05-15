@@ -139,14 +139,12 @@
       align-items: center;
       justify-content: center;
       margin: 0 0 2rem;
-      gap: 0;
     }
 
     .res-wire {
       height: 3px;
       width: 44px;
       background: linear-gradient(90deg, #555, #888);
-      position: relative;
     }
 
     .res-wire--left  { border-radius: 2px 0 0 2px; }
@@ -210,9 +208,7 @@
       font-family: var(--mono);
     }
 
-    .select-wrap {
-      position: relative;
-    }
+    .select-wrap { position: relative; }
 
     .color-swatch {
       position: absolute;
@@ -249,12 +245,10 @@
       box-shadow: 0 0 0 3px #f0c04018;
     }
 
-    .color-select:hover { border-color: var(--border2); filter: brightness(1.1); }
+    .color-select option { background: #1b1f27; }
 
     /* ─── RESULT PANEL ────────────────────────────────────── */
-    .result-panel {
-      margin-bottom: 2rem;
-    }
+    .result-panel { margin-bottom: 2rem; }
 
     .result-card {
       background: var(--surface);
@@ -275,9 +269,9 @@
     .result-top {
       display: flex;
       flex-wrap: wrap;
-      gap: 0;
       padding: 1.5rem;
       border-bottom: 1px solid var(--border);
+      gap: 0;
     }
 
     .result-metric {
@@ -319,8 +313,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 0.85rem 1.5rem;
-      gap: 1rem;
       flex-wrap: wrap;
+      gap: 0.75rem;
     }
 
     .range-label {
@@ -347,7 +341,7 @@
       border-radius: 20px;
     }
 
-    /* placeholder / error */
+    /* placeholder */
     .status-msg {
       background: var(--surface);
       border: 1px dashed var(--border2);
@@ -456,7 +450,12 @@
     /* ─── RESPONSIVE ──────────────────────────────────────── */
     @media (max-width: 500px) {
       .metric-value { font-size: 1.5rem; }
-      .result-metric + .result-metric { border-left: none; border-top: 1px solid var(--border); padding: 1rem 0 0; margin-top: 1rem; }
+      .result-metric + .result-metric {
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding: 1rem 0 0;
+        margin-top: 1rem;
+      }
       .res-capsule { min-width: 160px; }
       .res-wire { width: 24px; }
     }
@@ -476,7 +475,7 @@
       </div>
     </header>
 
-    <main class="main-content">
+    <main>
 
       <div class="mode-bar">
         <span class="mode-label">Band mode</span>
@@ -500,7 +499,6 @@
       </div>
 
       <div class="band-grid" id="band-grid"></div>
-
       <div class="result-panel" id="result-area"></div>
 
       <details class="ref-table-wrap">
@@ -509,10 +507,7 @@
           <table class="ref-table">
             <thead>
               <tr>
-                <th>Color</th>
-                <th>Digit</th>
-                <th>Multiplier</th>
-                <th>Tolerance</th>
+                <th>Color</th><th>Digit</th><th>Multiplier</th><th>Tolerance</th>
               </tr>
             </thead>
             <tbody id="ref-tbody"></tbody>
@@ -527,6 +522,178 @@
     </footer>
 
   </div>
+
+  <script>
+    /* ── DATA TABLE ────────────────────────────────────────── */
+    const COLORS = [
+      { name: "Black",  hex: "#1a1a1a", digit: 0, mult: 1,            tol: null  },
+      { name: "Brown",  hex: "#7b4a1e", digit: 1, mult: 10,           tol: 1     },
+      { name: "Red",    hex: "#c0392b", digit: 2, mult: 100,          tol: 2     },
+      { name: "Orange", hex: "#e67e22", digit: 3, mult: 1000,         tol: null  },
+      { name: "Yellow", hex: "#f1c40f", digit: 4, mult: 10000,        tol: null  },
+      { name: "Green",  hex: "#27ae60", digit: 5, mult: 100000,       tol: 0.5   },
+      { name: "Blue",   hex: "#2980b9", digit: 6, mult: 1000000,      tol: 0.25  },
+      { name: "Violet", hex: "#8e44ad", digit: 7, mult: 10000000,     tol: 0.1   },
+      { name: "Grey",   hex: "#7f8c8d", digit: 8, mult: 100000000,    tol: 0.05  },
+      { name: "White",  hex: "#f5f5f0", digit: 9, mult: 1000000000,   tol: null  },
+      { name: "Gold",   hex: "#c8a600", digit: null, mult: 0.1,       tol: 5     },
+      { name: "Silver", hex: "#9e9e9e", digit: null, mult: 0.01,      tol: 10    },
+      { name: "None",   hex: "transparent", digit: null, mult: null,  tol: 20    },
+    ];
+    const DIGIT_COLORS = COLORS.filter(c => c.digit !== null);
+    const MULT_COLORS  = COLORS.filter(c => c.mult  !== null && c.name !== "None");
+    const TOL_COLORS   = COLORS.filter(c => c.tol   !== null);
+
+    /* ── STATE ─────────────────────────────────────────────── */
+    let mode = 4;
+    let sel  = { b1: "", b2: "", b3: "", mult: "", tol: "" };
+
+    const bandDomMap = { b1: "rb1", b2: "rb2", b3: "rb3", mult: "rbmult", tol: "rbtol" };
+
+    /* ── HELPERS ───────────────────────────────────────────── */
+    const byName = name => COLORS.find(c => c.name === name);
+
+    function formatOhms(v) {
+      if (v >= 1e9) return (v / 1e9).toFixed(v % 1e9 === 0 ? 0 : 2) + " GΩ";
+      if (v >= 1e6) return (v / 1e6).toFixed(v % 1e6 === 0 ? 0 : 2) + " MΩ";
+      if (v >= 1e3) return (v / 1e3).toFixed(v % 1e3 === 0 ? 0 : 2) + " kΩ";
+      return v.toFixed(v < 1 ? 2 : 0) + " Ω";
+    }
+    function setResistorBand(key, hex) {
+      const el = document.getElementById(bandDomMap[key]);
+      if (el) el.style.background = (!hex || hex === "transparent") ? "#c8b87a" : hex;
+    }
+    /* ── MODE SWITCH ───────────────────────────────────────── */
+    function setMode(n) {
+      mode = n;
+      [4, 5].forEach(m =>
+        document.getElementById("btn" + m).classList.toggle("active", m === n)
+      );
+      sel = { b1: "", b2: "", b3: "", mult: "", tol: "" };
+      document.getElementById("rb3").style.display = n === 5 ? "" : "none";
+      renderBands();
+      calculate();
+    }
+    /* ── BUILD A DROPDOWN COLUMN ───────────────────────────── */
+    function buildSelect(id, list, label, key) {
+      const col = document.createElement("div");
+      col.className = "band-col";
+
+      const lbl = document.createElement("span");
+      lbl.className = "band-label";
+      lbl.textContent = label;
+
+      const wrap = document.createElement("div");
+      wrap.className = "select-wrap";
+
+      const swatch = document.createElement("div");
+      swatch.className = "color-swatch";
+      swatch.id = "sw_" + key;
+
+      const dropdown = document.createElement("select");
+      dropdown.className = "color-select";
+      dropdown.id = id;
+      dropdown.innerHTML =
+        `<option value="">— choose —</option>` +
+        list.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
+
+      dropdown.addEventListener("change", () => {
+        sel[key] = dropdown.value;
+        const c = byName(dropdown.value);
+        swatch.style.background = c ? c.hex : "";
+        swatch.style.border     = c ? "1px solid #ffffff22" : "";
+        setResistorBand(key, c ? c.hex : null);
+        calculate();
+      });
+
+      wrap.appendChild(swatch);
+      wrap.appendChild(dropdown);
+      col.appendChild(lbl);
+      col.appendChild(wrap);
+      return col;
+    }
+    /* ── RENDER BAND DROPDOWNS ─────────────────────────────── */
+    function renderBands() {
+      const grid = document.getElementById("band-grid");
+      grid.innerHTML = "";
+      grid.appendChild(buildSelect("s_b1",   DIGIT_COLORS, "Band 1 — digit",   "b1"));
+      grid.appendChild(buildSelect("s_b2",   DIGIT_COLORS, "Band 2 — digit",   "b2"));
+      if (mode === 5)
+        grid.appendChild(buildSelect("s_b3", DIGIT_COLORS, "Band 3 — digit",   "b3"));
+      grid.appendChild(buildSelect("s_mult", MULT_COLORS,  "Multiplier",       "mult"));
+      grid.appendChild(buildSelect("s_tol",  TOL_COLORS,   "Tolerance",        "tol"));
+      Object.values(bandDomMap).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.background = "#c8b87a";
+      });
+    }
+    /* ── CALCULATE & RENDER RESULT ─────────────────────────── */
+    function calculate() {
+      const area = document.getElementById("result-area");
+      const { b1, b2, b3, mult, tol } = sel;
+      const need3 = mode === 5;
+      const ready = b1 && b2 && (need3 ? b3 : true) && mult && tol;
+
+      if (!ready) {
+        const filled = [b1, b2, need3 ? b3 : "ok", mult, tol].filter(Boolean).length;
+        const total  = need3 ? 5 : 4;
+        area.innerHTML = `
+          <div class="status-msg">
+            <div class="status-dot"></div>
+            Select all ${total} bands — ${filled} of ${total} chosen
+          </div>`;
+        return;
+      }
+      const c1 = byName(b1), c2 = byName(b2), cm = byName(mult), ct = byName(tol);
+      const c3 = need3 ? byName(b3) : null;
+
+      const digits     = need3 ? c1.digit*100 + c2.digit*10 + c3.digit
+                                : c1.digit*10  + c2.digit;
+      const resistance = digits * cm.mult;
+      const tolPct     = ct.tol;
+      const low        = resistance * (1 - tolPct / 100);
+      const high       = resistance * (1 + tolPct / 100);
+
+      area.innerHTML = `
+        <div class="result-card">
+          <div class="result-top">
+            <div class="result-metric">
+              <div class="metric-label">Resistance</div>
+              <div class="metric-value">${formatOhms(resistance)}</div>
+            </div>
+            <div class="result-metric">
+              <div class="metric-label">Tolerance</div>
+              <div class="metric-value tol-value">±${tolPct}%</div>
+            </div>
+          </div>
+          <div class="result-bottom">
+            <div>
+              <div class="range-label">Acceptable range</div>
+              <div class="range-value">${formatOhms(low)} — ${formatOhms(high)}</div>
+            </div>
+            <span class="mult-badge">×${cm.mult >= 1 ? cm.mult.toLocaleString() : cm.mult}</span>
+          </div>
+        </div>`;
+    }
+    /* ── POPULATE REFERENCE TABLE ──────────────────────────── */
+    function buildRefTable() {
+      const tbody = document.getElementById("ref-tbody");
+      COLORS.forEach(c => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><span class="ref-swatch" style="background:${c.hex}"></span>${c.name}</td>
+          <td>${c.digit !== null ? c.digit : "—"}</td>
+          <td>${c.mult  !== null ? (c.mult >= 1 ? "×" + c.mult.toLocaleString() : "×" + c.mult) : "—"}</td>
+          <td>${c.tol   !== null ? "±" + c.tol + "%" : "—"}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    /* ── INIT ──────────────────────────────────────────────── */
+    document.getElementById("rb3").style.display = "none";
+    renderBands();
+    calculate();
+    buildRefTable();
+  </script>
 
 </body>
 </html>
