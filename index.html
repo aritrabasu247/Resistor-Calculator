@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resistor Color Code Calculator</title>
+</head>
+<body>
+
+  <div class="page-wrapper">
+
+    <header class="site-header">
+      <div class="header-inner">
+        <span class="logo-icon">⏚</span>
+        <div>
+          <h1 class="site-title">ResistorCalc</h1>
+          <p class="site-sub">IEC 60062 Color Code Reference</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+
+      <!-- Band mode selector -->
+      <div class="mode-bar">
+        <span class="mode-label">Band mode</span>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="btn4" onclick="setMode(4)">4-Band</button>
+          <button class="mode-btn" id="btn5" onclick="setMode(5)">5-Band</button>
+        </div>
+      </div>
+
+      <!-- Resistor visual -->
+      <div class="resistor-stage">
+        <div class="res-wire res-wire--left"></div>
+        <div class="res-capsule" id="resbody">
+          <div class="res-band" id="rb1"></div>
+          <div class="res-band" id="rb2"></div>
+          <div class="res-band" id="rb3"></div>
+          <div class="res-gap"></div>
+          <div class="res-band" id="rbmult"></div>
+          <div class="res-band" id="rbtol"></div>
+        </div>
+        <div class="res-wire res-wire--right"></div>
+      </div>
+
+      <!-- Band selectors grid -->
+      <div class="band-grid" id="band-grid">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Result display -->
+      <div class="result-panel" id="result-area">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Color reference table -->
+      <details class="ref-table-wrap">
+        <summary class="ref-toggle">Color Code Reference Table</summary>
+        <div class="ref-table-scroll">
+          <table class="ref-table" id="ref-table">
+            <thead>
+              <tr>
+                <th>Color</th>
+                <th>Digit</th>
+                <th>Multiplier</th>
+                <th>Tolerance</th>
+              </tr>
+            </thead>
+            <tbody id="ref-tbody">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+    </main>
+
+    <footer class="site-footer">
+      <p>Built for ECE lab use · IEC 60062 standard</p>
+    </footer>
+
+  </div>
+
+</body>
+</html>
